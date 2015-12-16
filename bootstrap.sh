@@ -18,31 +18,33 @@ base_install_package="private-chef_$base_version-1_amd64.deb"
 base_chef_cmd="/usr/bin/private-chef-ctl"
 upgrade_install_package="chef-server-core_$upgrade_version-1_amd64.deb"
 upgrade_chef_cmd="/usr/bin/chef-server-ctl"
+code_name=$(lsb_release -cs)
 
 # Busser is currently hardcoded to use Chef's ruby, so we need to install Chef
 # This may have been fixed in https://github.com/test-kitchen/test-kitchen/pull/833,
 # which will be in kitchen 1.4.3
-wget -O - https://www.chef.io/chef/install.sh | sudo bash
+apt-get install -y curl
+curl -L https://www.chef.io/chef/install.sh | bash
 
 
 # If missing, download packages or move packages into place from kitchen data
 if [ ! -f $tmp_data/$base_install_package ]
 then
-  if [ -f $kitchen_data/$base_install_package ]
+  if [ -f $kitchen_data/$code_name/$base_install_package ]
   then
-    mv $kitchen_data/$base_install_package $tmp_data/
+    mv $kitchen_data/$code_name/$base_install_package $tmp_data/
   else
-    wget -O "$tmp_data/$base_install_package" "https://packagecloud.io/chef/stable/packages/ubuntu/precise/$base_install_package/download"
+    wget -O "$tmp_data/$base_install_package" "https://packagecloud.io/chef/stable/packages/ubuntu/$code_name/$base_install_package/download"
   fi
 fi
 
 if [ ! -f $tmp_data/$upgrade_install_package ]
 then
-  if [ -f $kitchen_data/$upgrade_install_package ]
+  if [ -f $kitchen_data/$code_name/$upgrade_install_package ]
   then
-    mv $kitchen_data/$upgrade_install_package $tmp_data/
+    mv $kitchen_data/$code_name/$upgrade_install_package $tmp_data/
   else
-    wget -O "$tmp_data/$upgrade_install_package" "https://packagecloud.io/chef/stable/packages/ubuntu/precise/$upgrade_install_package/download"
+    wget -O "$tmp_data/$upgrade_install_package" "https://packagecloud.io/chef/stable/packages/ubuntu/$code_name/$upgrade_install_package/download"
   fi
 fi
 
