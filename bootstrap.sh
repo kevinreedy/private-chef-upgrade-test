@@ -3,7 +3,6 @@ set -e
 
 # TODO: support Ubuntu 10.04 and 12.04
 # TODO: support RHEL 5 and 6
-# TODO: test downloading packages when not on slow wifi
 
 # Variables
 base_version="11.2.2"
@@ -12,13 +11,18 @@ upgrade_version="12.3.1"
 
 # Set up
 kitchen_data="/tmp/kitchen/data"
-tmp_data="/tmp/ec-upgrade-test"
+tmp_data="/tmp/private-chef-upgrade-test"
 mkdir -p $tmp_data
 
 base_install_package="private-chef_$base_version-1_amd64.deb"
 base_chef_cmd="/usr/bin/private-chef-ctl"
 upgrade_install_package="chef-server-core_$upgrade_version-1_amd64.deb"
 upgrade_chef_cmd="/usr/bin/chef-server-ctl"
+
+# Busser is currently hardcoded to use Chef's ruby, so we need to install Chef
+# This may have been fixed in https://github.com/test-kitchen/test-kitchen/pull/833,
+# which will be in kitchen 1.4.3
+wget -O - https://www.chef.io/chef/install.sh | sudo bash
 
 
 # If missing, download packages or move packages into place from kitchen data
