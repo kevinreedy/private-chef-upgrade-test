@@ -1,29 +1,57 @@
 #!/bin/bash
 set -e
 
-# TODO: support Ubuntu 10.04 and 12.04
-# TODO: support RHEL 5 and 6
-
 # Variables
 base_version="11.2.2"
 upgrade_version="12.3.1"
 
 
 # Set up
+base_chef_cmd="/usr/bin/private-chef-ctl"
+upgrade_chef_cmd="/usr/bin/chef-server-ctl"
 kitchen_data="/tmp/kitchen/data"
 tmp_data="/tmp/private-chef-upgrade-test"
 mkdir -p $tmp_data
 
-base_install_package="private-chef_$base_version-1_amd64.deb"
-base_chef_cmd="/usr/bin/private-chef-ctl"
-upgrade_install_package="chef-server-core_$upgrade_version-1_amd64.deb"
-upgrade_chef_cmd="/usr/bin/chef-server-ctl"
-code_name=$(lsb_release -cs)
+
+# Determine platform and platform version
+if uname -a | grep el5
+then
+  # el5
+  code_name="el5"
+  base_install_package="private-chef-$base_version-1.$code_name.x86_64.rpm"
+  upgrade_install_package="chef-server-core-$upgrade_version-1.$code_name.x86_64.rpm"
+  download_prefix="https://packagecloud.io/chef/stable/packages/el/5"
+  package_install="/bin/rpm -Uvh --nopostun"
+  yum install -y curl
+elif uname -a | grep el6
+then
+  # el6
+  code_name="el6"
+  base_install_package="private-chef-$base_version-1.$code_name.x86_64.rpm"
+  upgrade_install_package="chef-server-core-$upgrade_version-1.$code_name.x86_64.rpm"
+  download_prefix="https://packagecloud.io/chef/stable/packages/el/6"
+  package_install="/bin/rpm -Uvh --nopostun"
+elif uname -a | grep Ubuntu
+then
+  # ubuntu
+  code_name=$(lsb_release -cs)
+  base_install_package="private-chef_$base_version-1_amd64.deb"
+  upgrade_install_package="chef-server-core_$upgrade_version-1_amd64.deb"
+  download_prefix="https://packagecloud.io/chef/stable/packages/ubuntu/$code_name"
+  package_install="/usr/bin/dpkg -i -D10"
+  apt-get update
+  apt-get install -y curl
+else
+  echo "platform not supported"
+  exit 100
+fi
+
 
 # Busser is currently hardcoded to use Chef's ruby, so we need to install Chef
 # This may have been fixed in https://github.com/test-kitchen/test-kitchen/pull/833,
 # which will be in kitchen 1.4.3
-apt-get install -y curl
+# TODO: skip if this is already installed
 curl -L https://www.chef.io/chef/install.sh | bash
 
 
@@ -34,7 +62,7 @@ then
   then
     mv $kitchen_data/$code_name/$base_install_package $tmp_data/
   else
-    wget -O "$tmp_data/$base_install_package" "https://packagecloud.io/chef/stable/packages/ubuntu/$code_name/$base_install_package/download"
+    wget -O "$tmp_data/$base_install_package" "$download_prefix/$base_install_package/download"
   fi
 fi
 
@@ -44,14 +72,14 @@ then
   then
     mv $kitchen_data/$code_name/$upgrade_install_package $tmp_data/
   else
-    wget -O "$tmp_data/$upgrade_install_package" "https://packagecloud.io/chef/stable/packages/ubuntu/$code_name/$upgrade_install_package/download"
+    wget -O "$tmp_data/$upgrade_install_package" "$download_prefix/$upgrade_install_package/download"
   fi
 fi
 
 
-# Install base version of Chef
+# Install base version of Chef Server
 # TODO: skip if this is already installed
-/usr/bin/dpkg -i $tmp_data/$base_install_package
+$package_install $tmp_data/$base_install_package
 $base_chef_cmd reconfigure
 
 
@@ -61,7 +89,7 @@ $base_chef_cmd reconfigure
 # Upgrade Chef
 # TODO: skip if this is already installed
 $base_chef_cmd stop
-/usr/bin/dpkg -D10 -i $tmp_data/$upgrade_install_package
+$package_install $tmp_data/$upgrade_install_package
 $upgrade_chef_cmd upgrade
 $upgrade_chef_cmd start
 $upgrade_chef_cmd cleanup
