@@ -82,8 +82,11 @@ fi
 $package_install $tmp_data/$base_install_package
 $base_chef_cmd reconfigure
 
-
+echo "hold it right there"
+exit 200
 # TODO: knife ec restore
+/opt/chef/embedded/bin/gem install knife-ec-backup -- --with-pg-config=/opt/opscode/embedded/postgresql/9.2/bin/pg_config
+
 
 
 # Upgrade Chef
